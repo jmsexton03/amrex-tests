@@ -1,0 +1,25 @@
+#!/bin/bash -l
+#SBATCH -p batch
+#SBATCH -A csc308_crusher
+#SBATCH -t 00:04:00 
+#SBATCH -J RCCL
+#SBATCH -o RCCL.o%A-%a
+#SBATCH -e RCCL.e%A-%a
+#SBATCH -N 1
+#SBATCH -c 8 
+#SBATCH --ntasks-per-node=8
+#SBATCH --gpus-per-task=1
+#SBATCH --gpu-bind=closest
+#SBATCH --array=1-4%4
+date "+%Y-%m-%d_%H:%M:%S"
+module load PrgEnv-gnu/8.3.3 craype-accel-amd-gfx90a rocm/5.1.0 cmake/3.22.1 gcc/11.2.0 git/2.31.1 git-lfs/2.11.0 cray-python/3.9.7.1 cray-mpich/8.1.15
+module tablelist
+module list
+module --redirect list
+export OMP_NUM_THREADS=8
+export OMP_PLACES=threads
+export OMP_PROC_BIND=true
+export FI_MR_CACHE_MAX_COUNT=0
+export SLURM_CPU_BIND="cores"
+srun main3d.hip.x86-trento.TPROF.MPI.HIP.ex inputs
+date "+%Y-%m-%d_%H:%M:%S"

@@ -8,28 +8,18 @@
 
 // ================================================
 
-#ifdef AMREX_USE_NCCL
+#ifdef AMREX_USE_CCL
 
+#ifdef AMREX_USE_CUDA
 #include <nccl.h>
-
-#define NCCLCHECK(cmd) do {                         \
+#elif defined(AMREX_USE_HIP)
+#include <rccl.h>
+#endif
+#define CCLCHECK(cmd) do {                         \
   ncclResult_t r = cmd;                             \
   if (r!= ncclSuccess) {                            \
     printf("Failed, NCCL error %s:%d '%s'\n",       \
         __FILE__,__LINE__,ncclGetErrorString(r));   \
-    exit(EXIT_FAILURE);                             \
-  }                                                 \
-} while(0)
-
-#elif defined(AMREX_USE_RCCL)
-
-#include <nccl.h>
-
-#define RCCLCHECK(cmd) do {                         \
-  rcclResult_t r = cmd;                             \
-  if (r!= rcclSuccess) {                            \
-    printf("Failed, NCCL error %s:%d '%s'\n",       \
-        __FILE__,__LINE__,rcclGetErrorString(r));   \
     exit(EXIT_FAILURE);                             \
   }                                                 \
 } while(0)
@@ -70,8 +60,8 @@ long compare(const long n_ele, double epsilon,
 
         if ( diff >= epsilon ) {
             errors++;
-            amrex::Print() << name_A << "/" << name_B << " #i " << " don't match: "
-                           << std::setprecision(17) << A[i] << " " << B[i];
+            amrex::Print() << name_A << "/" << name_B << " #"<<i<<" " << " don't match: "
+                           << std::setprecision(17) << A[i] << " " << B[i] << "\n";
         }
     }
 
@@ -118,7 +108,7 @@ void main_main ()
 
 // ***************************************************************
 
-#ifdef AMREX_USE_NCCL
+#ifdef AMREX_USE_CCL
     // NCCL Comm Setup
     ncclComm_t nccl_comm;
     {
@@ -128,11 +118,11 @@ void main_main ()
         int myProc = ParallelDescriptor::MyProc();
 
         // get NCCL unique ID at rank 0 and broadcast it to all others
-        if (myProc == 0) NCCLCHECK(ncclGetUniqueId(&id));
+        if (myProc == 0) CCLCHECK(ncclGetUniqueId(&id));
         ParallelDescriptor::Bcast((char*) (&id), sizeof(id));
 
         // initializing NCCL
-        NCCLCHECK(ncclCommInitRank(&nccl_comm, nRanks, id, myProc));
+        CCLCHECK(ncclCommInitRank(&nccl_comm, nRanks, id, myProc));
     }
 
     ncclDataType_t NCCLTYPE;
@@ -164,7 +154,7 @@ void main_main ()
         void* d1_buff = The_Device_Arena()->alloc(sz);
         void* d2_buff = The_Device_Arena()->alloc(sz);
 
-#ifdef AMREX_USE_NCCL
+#ifdef AMREX_USE_CCL
         void* p2_buff = The_Pinned_Arena()->alloc(sz);
         void* p3_buff = The_Pinned_Arena()->alloc(sz);
         void* p4_buff = The_Pinned_Arena()->alloc(sz);
@@ -228,7 +218,7 @@ void main_main ()
             }
         }
 // ==================================================================================
-#ifdef AMREX_USE_NCCL
+#ifdef AMREX_USE_CCL
         BL_PROFILE_VAR_NS("AllReduce: NCCL(Device) - " + std::to_string(n_ele), nccl_p);
         BL_PROFILE_VAR_NS("AllReduce: NCCL-to-CPU(Device) - " + std::to_string(n_ele), ncclcpu_p);
         Gpu::htod_memcpy(d3_buff, data.data(), sz);
@@ -240,7 +230,7 @@ void main_main ()
 
             if (i >= n_warmup) { BL_PROFILE_VAR_START(ncclcpu_p); BL_PROFILE_VAR_START(nccl_p); }
 
-            NCCLCHECK( ncclAllReduce(d3_buff, d4_buff, n_ele,
+            CCLCHECK( ncclAllReduce(d3_buff, d4_buff, n_ele,
                                      NCCLTYPE, ncclSum, nccl_comm, Gpu::Device::gpuStream()) );
 
             Gpu::Device::synchronize();
@@ -262,7 +252,7 @@ void main_main ()
 
             if (i >= n_warmup) { BL_PROFILE_VAR_START(ncclpin_p); }
 
-            NCCLCHECK( ncclAllReduce(d3_buff, p2_buff, n_ele,
+            CCLCHECK( ncclAllReduce(d3_buff, p2_buff, n_ele,
                                      NCCLTYPE, ncclSum, nccl_comm, Gpu::Device::gpuStream()) );
 
             Gpu::Device::synchronize();
@@ -274,12 +264,12 @@ void main_main ()
 
         std::memcpy(p3_buff, data.data(), sz);
         for (int i=0; i<n_warmup+n_tests; ++i)
-        {
+	{
             std::memcpy(p4_buff, zero.data(), sz);
 
             if (i >= n_warmup) { BL_PROFILE_VAR_START(ncclisp_p); }
 
-            NCCLCHECK( ncclAllReduce(p3_buff, p4_buff, n_ele,
+            CCLCHECK( ncclAllReduce(p3_buff, p4_buff, n_ele,
                                      NCCLTYPE, ncclSum, nccl_comm, Gpu::Device::gpuStream()) );
 
             Gpu::Device::synchronize();
@@ -335,7 +325,11 @@ void main_main ()
                 wrong += compare(n_ele, epsilon, cpu.data(), answer.data(), "CPU", "AwareMPI");
             }
 
+<<<<<<< Updated upstream
 #ifdef AMREX_USE_NCCL
+=======
+#ifdef AMREX_USE_CCL
+>>>>>>> Stashed changes
             Gpu::dtoh_memcpy(c_buff, d4_buff, sz);
             for (int i=0; i<n_ele; ++i)
                 { answer[i] = reinterpret_cast<Real*>(c_buff)[i]; }
@@ -369,7 +363,7 @@ void main_main ()
         The_Device_Arena()->free(d1_buff);
         The_Device_Arena()->free(d2_buff);
 
-#ifdef AMREX_USE_NCCL
+#ifdef AMREX_USE_CCL
         The_Pinned_Arena()->free(p2_buff);
         The_Pinned_Arena()->free(p3_buff);
         The_Pinned_Arena()->free(p4_buff);
@@ -387,8 +381,8 @@ void main_main ()
 #endif
     }
 
-#ifdef AMREX_USE_NCCL
-    NCCLCHECK(ncclCommDestroy(nccl_comm));
+#ifdef AMREX_USE_CCL
+    CCLCHECK(ncclCommDestroy(nccl_comm));
 #endif
 
 #ifdef AMREX_USE_NVSHMEM

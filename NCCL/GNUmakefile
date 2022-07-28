@@ -12,7 +12,8 @@ BL_NO_FORT   = TRUE
 COMP         = gnu
 DIM          = 3
 
-USE_NCCL     = TRUE
+USE_NCCL     = FALSE
+USE_RCCL     = TRUE
 USE_NVSHMEM  = FALSE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
@@ -40,7 +41,14 @@ endif
 ifeq ($(USE_NCCL),TRUE)
   EXTRACXXFLAGS += -I$(NCCL_DIR)/include
   LINKFLAGS += -L$(NCCL_DIR)/lib -lnccl
-  DEFINES += -DAMREX_USE_NCCL
+  DEFINES += -DAMREX_USE_CCL
+endif
+
+ifeq ($(USE_RCCL),TRUE)
+  RCCL_DIR := $(ROCM_PATH)/rccl
+  EXTRACXXFLAGS += -I$(RCCL_DIR)/include
+  LINKFLAGS += -L$(RCCL_DIR)/lib -lrccl
+  DEFINES += -DAMREX_USE_CCL
 endif
 
 ifeq ($(USE_NVSHMEM),TRUE)
