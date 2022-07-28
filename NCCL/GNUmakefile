@@ -12,8 +12,8 @@ BL_NO_FORT   = TRUE
 COMP         = gnu
 DIM          = 3
 
-USE_NCCL     = FALSE
-USE_RCCL     = TRUE
+USE_NCCL     = TRUE
+USE_RCCL     = FALSE
 USE_NVSHMEM  = FALSE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
@@ -39,6 +39,7 @@ endif
 
 
 ifeq ($(USE_NCCL),TRUE)
+#  NCCL_DIR := /pscratch/sd/j/jmsexton/test_amrex/nccl/install
   EXTRACXXFLAGS += -I$(NCCL_DIR)/include
   LINKFLAGS += -L$(NCCL_DIR)/lib -lnccl
   DEFINES += -DAMREX_USE_CCL
@@ -53,8 +54,13 @@ endif
 
 ifeq ($(USE_NVSHMEM),TRUE)
 #  NVSHMEM_DIR := $(CUDATOOLKIT_HOME)/../../comm_libs/nvshmem/
-  NVSHMEM_DIR := /global/cfs/cdirs/m1759/kngott/nvshmem/nvshmem
+  NVSHMEM_DIR := /pscratch/sd/j/jmsexton/test_amrex/nvshmem/nvshmem
+##  NVSHMEM_DIR := /pscratch/sd/j/jmsexton/test_amrex/nvshmem_try_libfabric/nvshmem
+  LIBFABRIC_HOME := /opt/cray/libfabric/1.15.0.0/
   EXTRACXXFLAGS += -I$(NVSHMEM_DIR)/include
-  LINKFLAGS += -L$(NVSHMEM_DIR)/lib -lnvshmem
+  EXTRACXXFLAGS += -I$(LIBFABRIC_HOME)/include/rdma
+  LINKFLAGS += -L$(NVSHMEM_DIR)/lib -lnvshmem -lnvidia-ml
+  LINKFLAGS += -L$(LIBFABRIC_HOME)/lib64 -lfabric
   DEFINES += -DAMREX_USE_NVSHMEM
+  DEFINES += -DAMREX_GPUS_PER_NODE=4
 endif

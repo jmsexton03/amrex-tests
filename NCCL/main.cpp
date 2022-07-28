@@ -325,11 +325,7 @@ void main_main ()
                 wrong += compare(n_ele, epsilon, cpu.data(), answer.data(), "CPU", "AwareMPI");
             }
 
-<<<<<<< Updated upstream
-#ifdef AMREX_USE_NCCL
-=======
 #ifdef AMREX_USE_CCL
->>>>>>> Stashed changes
             Gpu::dtoh_memcpy(c_buff, d4_buff, sz);
             for (int i=0; i<n_ele; ++i)
                 { answer[i] = reinterpret_cast<Real*>(c_buff)[i]; }
