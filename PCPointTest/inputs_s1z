@@ -1,0 +1,9 @@
+domain = (32, 32, 128)
+max_grid_size = (32, 32, 128)
+ncomp = 6
+nghost = (0, 0, 0)
+periodicity = (0, 0, 0)
+steps = 150000
+
+amrex.v = 1
+#DistributionMapping.verbose_mapper=1
